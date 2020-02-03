@@ -29,7 +29,7 @@ def _ParseArguments(args):
   return cmd, opt, arg
 
 def _CloneSubRepos(args):
-  f = open(args[0],'r');
+  f = open(args[0],'r')
   lines = f.read().splitlines()
   for line in lines:
     if os.path.isdir(re.split(r',',line)[0]):
@@ -41,14 +41,36 @@ def _CloneSubRepos(args):
     subprocess.Popen(cmd)
     del cmd
   f.close()
+  cmd = ['cp']
+  cmd.extend([args[0]])
+  cmd.extend(['default.tag'])
+  subprocess.Popen(cmd)
   print "crepo: init done"
   return
 
-def _SyncSubRepos(args):
-  me = ['git', 'clone']
-  me.extend(args)
-  print me
-  subprocess.Popen(me)
+def _SyncSubRepos():
+  if 0 == os.path.isfile('default.tag'):
+    print "fatal: no default file. Please crepo init"
+    return
+  f = open('default.tag','r')
+  lines = f.read().splitlines()
+  cwd = os.getcwd()
+  for line in lines:
+    if os.path.isdir(re.split(r',',line)[0]):
+      cmd = ['git', 'checkout','-b','local']
+      version = re.split(r',',line)[2]
+      cmd.extend([version])
+      os.chdir(re.split(r',',line)[0])
+      try:
+        subprocess.Popen(cmd)
+      except OSError as e:
+        print 'git checkout fatal!'
+      os.chdir(cwd)
+      del cmd
+    else:
+      print ('fatal! git repo does not exsit: %s' % re.split(r',',line)[0])
+  f.close()
+  print "crepo: sync done"
   return
 
 
@@ -68,7 +90,7 @@ def main(orig_args):
       sys.exit(1)
   elif cmd == 'sync':
     try:
-     _SyncSubRepos(args);
+     _SyncSubRepos();
     except CloneFailure:
       print("fatal: sync failed")
       sys.exit(1)
