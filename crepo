@@ -2,6 +2,7 @@
 import os
 import sys
 import subprocess
+import re
 
 class _Options(object):
   help = False
@@ -27,6 +28,22 @@ def _ParseArguments(args):
       break
   return cmd, opt, arg
 
+def _CloneSubRepos(args):
+  f = open(args[0],'r');
+  lines = f.read().splitlines()
+  for line in lines:
+    if os.path.isdir(re.split(r',',line)[0]):
+      print "crepo: folder exist"
+      continue
+    cmd = ['git', 'clone']
+    repo = re.split(r',',line)[1]
+    cmd.extend([repo])
+    subprocess.Popen(cmd)
+    del cmd
+  f.close()
+  print "crepo: init done"
+  return
+
 def _SyncSubRepos(args):
   me = ['git', 'clone']
   me.extend(args)
@@ -45,17 +62,16 @@ def main(orig_args):
   cwd = os.getcwd()
   if cmd == 'init':
     try:
-      me = ['git', 'clone']
-      me.extend(args)
-      print me
-      subprocess.Popen(me)
+     _CloneSubRepos(args);
     except CloneFailure:
       print("fatal: cloning the git-crepo repository failed, will remove %s ")
       sys.exit(1)
-  else if cmd == 'sync':
+  elif cmd == 'sync':
     try:
-     __SyncSubRepos(args);
-
+     _SyncSubRepos(args);
+    except CloneFailure:
+      print("fatal: sync failed")
+      sys.exit(1)
   else:
     try:
       print "TBD"
