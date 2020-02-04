@@ -32,11 +32,12 @@ def _CloneSubRepos(args):
   f = open(args[0],'r')
   lines = f.read().splitlines()
   for line in lines:
-    if os.path.isdir(re.split(r',',line)[0]):
+    strs = re.split(r',',line)
+    if os.path.isdir(strs[0]):
       print "crepo: folder exist"
       continue
     cmd = ['git', 'clone']
-    repo = re.split(r',',line)[1]
+    repo = strs[1]
     cmd.extend([repo])
     subprocess.Popen(cmd)
     del cmd
@@ -56,15 +57,16 @@ def _SyncSubRepos():
   lines = f.read().splitlines()
   cwd = os.getcwd()
   for line in lines:
-    if os.path.isdir(re.split(r',',line)[0]):
-      cmd = ['git', 'checkout','-b','local']
-      version = re.split(r',',line)[2]
+    strs = re.split(r',',line)
+    if os.path.isdir(strs[0]):
+      cmd = ['git', 'checkout']
+      os.chdir(strs[0])
+      version = strs[2]
       cmd.extend([version])
-      os.chdir(re.split(r',',line)[0])
       try:
         subprocess.Popen(cmd)
       except OSError as e:
-        print 'git checkout fatal!'
+        print 'git checkout fail!'
       os.chdir(cwd)
       del cmd
     else:
@@ -73,14 +75,36 @@ def _SyncSubRepos():
   print "crepo: sync done"
   return
 
+def _GenTagSubRepos(args):
+  f_old = open(args[0],'r')
+  f_new = open('gentag.tmp','wt')
+  lines = f_old.read().splitlines()
+  print lines
+  cwd = os.getcwd()
+  for line in lines:
+    strs = re.split(r',',line)
+    print strs[0]
+    if not os.path.isdir(strs[0]):
+      print 'crepo: folder does not exist'
+      sys.exit(1)
+    if not strs[2] == 'master':
+      os.chdir(strs[0])
+      cmd = 'git rev-list --all --max-count=1'
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+      version = p.stdout.read().strip('\n')
+      line = strs[0] + ',' + strs[1] + ',' + version + '\n'
+      os.chdir(cwd)
+    f_new.write(line)  
+  f_old.close()
+  f_new.close()
+  os.remove(args[0])
+  os.rename('gentag.tmp',args[0])
+  print 'crepo: tag generation done'
+  return
 
 def main(orig_args):
   cmd, opt, args = _ParseArguments(orig_args)
 
-#   if opt.help:
-#     _Usage()
-#   if cmd == 'help':
-#     _Help(args)
   cwd = os.getcwd()
   if cmd == 'init':
     try:
@@ -93,6 +117,12 @@ def main(orig_args):
      _SyncSubRepos();
     except CloneFailure:
       print("fatal: sync failed")
+      sys.exit(1)
+  elif cmd == 'gen_tag':
+    try:
+      _GenTagSubRepos(args);
+    except CloneFailure:
+      print("fatal: tag generation failed")
       sys.exit(1)
   else:
     try:
