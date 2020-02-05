@@ -31,7 +31,7 @@ def _ParseArguments(args):
 def _CloneSubRepos(args):
   f = open(args[0],'r')
   lines = f.read().splitlines()
-  cmd = ['cp']
+  cmd = ['ln','-s']
   cmd.extend([args[0]])
   cmd.extend(['default.tag'])
   subprocess.Popen(cmd)
@@ -61,8 +61,11 @@ def _SyncSubRepos():
   for line in lines:
     strs = re.split(r',',line)
     if os.path.isdir(strs[0]):
-      cmd = ['git', 'checkout']
       os.chdir(strs[0])
+      cmd = ['git', 'fetch']
+      p = subprocess.Popen(cmd)
+      p.wait()
+      cmd = ['git', 'checkout']
       version = strs[2]
       cmd.extend([version])
       try:
@@ -77,7 +80,56 @@ def _SyncSubRepos():
   print "crepo: sync done"
   return
 
-def _GenTagSubRepos(args):
+def _DevSubRepos(args):
+  f = open('default.tag','r')
+  lines = f.read().splitlines()
+  cwd = os.getcwd()
+  print lines
+  print args
+
+  for line in lines:
+     print line
+     path = re.split(r',',line)[0]
+     if not os.path.isdir(path):
+       print ('fatal! git repo does not exsit: %s' % path)
+       continue
+     for arg in args:
+       print arg
+       if path.endswith(arg):
+         os.chdir(path)
+         cmd = "git checkout master && git pull"
+         p = subprocess.Popen(cmd,shell=True)
+         p.wait()
+         os.chdir(cwd)
+  f.close()
+  print "crepo: set to devoplop mode done"
+  return
+
+def _InitTag(args):
+  f = open(args[0],'wt')
+  cmd = 'find -iname ".git"'
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+  lines = re.split(r'\n',p.stdout.read())
+  cwd = os.getcwd()
+  for line in lines:
+    if './.git' == line:
+      continue
+    elif not '' == line:
+      path = line.strip('/.git')
+      os.chdir(path)
+      cmd = 'git remote --verbose | grep fetch'
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+      url = p.stdout.read().rstrip('(fetch)\n').lstrip('origin').strip()
+      cmd = 'git rev-list --all --max-count=1'
+      p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+      version = p.stdout.read()
+      print path + ',' + url + ',' + version
+      f.write(path + ',' + url + ',' + version)
+      os.chdir(cwd)
+  f.close()
+  return
+
+def _UpdateTag(args):
   f_old = open(args[0],'r')
   f_new = open('gentag.tmp','wt')
   lines = f_old.read().splitlines()
@@ -120,15 +172,24 @@ def main(orig_args):
     except CloneFailure:
       print("fatal: sync failed")
       sys.exit(1)
-  elif cmd == 'gen_tag':
+  elif cmd == 'develop':
     try:
-      _GenTagSubRepos(args);
+     _DevSubRepos(args);
     except CloneFailure:
-      print("fatal: tag generation failed")
+      print("fatal: develop failed")
       sys.exit(1)
-  elif cmd == 'init_tag':
-    print 'TBD'
-    #goto every dir to find .git folder and generate tag file, and add the folder to .gitignore
+  elif cmd == 'tag':
+    if args[0] == 'update':
+      try:
+        _UpdateTag(args[1:])
+      except CloneFailure:
+        print("fatal: tag update failed")
+        sys.exit(1)
+    elif args[0] == 'init':
+      try:
+        _InitTag(args[1:])
+      except CloneFailure:
+        print("fatal: tag initialization failed")
   else:
     try:
       print "TBD"
