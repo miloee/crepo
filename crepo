@@ -31,6 +31,10 @@ def _ParseArguments(args):
 def _CloneSubRepos(args):
   f = open(args[0],'r')
   lines = f.read().splitlines()
+  cmd = ['cp']
+  cmd.extend([args[0]])
+  cmd.extend(['default.tag'])
+  subprocess.Popen(cmd)
   for line in lines:
     strs = re.split(r',',line)
     if os.path.isdir(strs[0]):
@@ -39,13 +43,11 @@ def _CloneSubRepos(args):
     cmd = ['git', 'clone']
     repo = strs[1]
     cmd.extend([repo])
-    subprocess.Popen(cmd)
+    cmd.extend([strs[0]])
+    p = subprocess.Popen(cmd)
+    p.wait()
     del cmd
   f.close()
-  cmd = ['cp']
-  cmd.extend([args[0]])
-  cmd.extend(['default.tag'])
-  subprocess.Popen(cmd)
   print "crepo: init done"
   return
 
@@ -124,6 +126,9 @@ def main(orig_args):
     except CloneFailure:
       print("fatal: tag generation failed")
       sys.exit(1)
+  elif cmd == 'init_tag':
+    print 'TBD'
+    #goto every dir to find .git folder and generate tag file, and add the folder to .gitignore
   else:
     try:
       print "TBD"
