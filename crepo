@@ -38,6 +38,8 @@ def _CloneSubRepos(args):
   cmd.extend(['default.tag'])
   subprocess.Popen(cmd)
   for line in lines:
+    if line == '':
+      continue
     strs = re.split(r',',line)
     if os.path.isdir(strs[0]):
       print ("crepo: folder exist")
