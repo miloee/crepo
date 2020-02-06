@@ -114,7 +114,7 @@ def _DevSubRepos(args):
 
 def _InitTag(args):
   f = open(args[0],'wt')
-  cmd = 'find -iname ".git"'
+  cmd = 'find . -name ".git"'
   p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
   result = p.stdout.read()
   lines = re.split(r'\n', result.decode())
