@@ -129,7 +129,7 @@ def _InitTag(args):
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
       result = p.stdout.read()
       url = result.decode().rstrip('(fetch)\n').lstrip('origin').strip()
-      cmd = 'git rev-list --all --max-count=1'
+      cmd = 'git rev-parse --verify HEAD'
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
       version = p.stdout.read()
       f.write(path + ',' + url + ',' + version.decode())
@@ -149,7 +149,7 @@ def _UpdateTag(args):
       sys.exit(1)
     if not strs[2] == 'master':
       os.chdir(strs[0])
-      cmd = 'git rev-list --all --max-count=1'
+      cmd = 'git rev-parse --verify HEAD'
       p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
       version = p.stdout.read()
       line = strs[0] + ',' + strs[1] + ',' + version.decode()
