@@ -29,6 +29,8 @@ def _ParseArguments(args):
   return cmd, opt, arg
 
 def _CloneSubRepos(args):
+  if os.path.islink('default.tag'):
+    os.remove('default.tag')
   f = open(args[0],'r')
   lines = f.read().splitlines()
   cmd = ['ln','-s']
@@ -81,12 +83,14 @@ def _SyncSubRepos():
   return
 
 def _DevSubRepos(args):
-  f = open('default.tag','r')
-  lines = f.read().splitlines()
+  old_file = os.readlink('default.tag') 
+  f_old = open(old_file,'r')
+  f_new = open('gentag.tmp','wt')
+  lines = f_old.read().splitlines()
   cwd = os.getcwd()
-
   for line in lines:
-     path = re.split(r',',line)[0]
+     strs = re.split(r',',line)
+     path = strs[0]
      if not os.path.isdir(path):
        print ('fatal! git repo does not exsit: %s' % path)
        continue
@@ -97,7 +101,12 @@ def _DevSubRepos(args):
          p = subprocess.Popen(cmd,shell=True)
          p.wait()
          os.chdir(cwd)
-  f.close()
+         line = strs[0] + ',' + strs[1] + ',master\n'
+     f_new.write(line+'\n')
+  f_old.close()
+  f_new.close()
+  os.remove(old_file)
+  os.rename('gentag.tmp',old_file)
   print ("crepo: set to devoplop mode done")
   return
 
